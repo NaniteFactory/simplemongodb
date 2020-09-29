@@ -15,6 +15,7 @@ import (
 var defaultSingleMongoDB = &singleMongoDB{}
 
 // Self returns this package as an object.
+// It is not recommended to use this function.
 func Self() SingleMongoDB {
 	return defaultSingleMongoDB
 }
@@ -25,11 +26,14 @@ func New() SingleMongoDB {
 }
 
 // Connect to a single DB with a single mongo client.
+// Errors if it cannot reach any of desired database or collections.
+// Call Disconnect method to close down connection.
 func Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error {
 	return defaultSingleMongoDB.Connect(ctx, uri, nameDB, nameCollections...)
 }
 
-// Disconnect the connection to DB.
+// Disconnect from client and delete its object.
+// If client is nil then this procedure is noop.
 func Disconnect(ctx context.Context) error {
 	return defaultSingleMongoDB.Disconnect(ctx)
 }
@@ -59,13 +63,13 @@ func Collection(name string, opts ...*options.CollectionOptions) *mongo.Collecti
 
 // SingleMongoDB wraps around a single DB with a single mongodb client.
 type SingleMongoDB interface {
-	New() SingleMongoDB
 	Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error
 	Disconnect(ctx context.Context) error
 	IsConnected() bool
 	Client() *mongo.Client
 	Database() *mongo.Database
 	Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection
+	New() SingleMongoDB
 }
 
 // singleMongoDB wraps around a single DB with a single mongodb client.
