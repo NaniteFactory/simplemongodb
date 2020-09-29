@@ -34,6 +34,11 @@ func Disconnect(ctx context.Context) error {
 	return defaultSingleMongoDB.Disconnect(ctx)
 }
 
+// IsConnected tells if this is connected.
+func IsConnected() bool {
+	return defaultSingleMongoDB.IsConnected()
+}
+
 // Client is a getter returning a mongo client.
 // This returns nil if not connected.
 func Client() *mongo.Client {
@@ -57,6 +62,7 @@ type SingleMongoDB interface {
 	New() SingleMongoDB
 	Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error
 	Disconnect(ctx context.Context) error
+	IsConnected() bool
 	Client() *mongo.Client
 	Database() *mongo.Database
 	Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection
@@ -147,6 +153,13 @@ func (smdb *singleMongoDB) Disconnect(ctx context.Context) error {
 		return errors.New("not connected")
 	}
 	return smdb.client.Disconnect(ctx)
+}
+
+// IsConnected tells if this is connected.
+func (smdb *singleMongoDB) IsConnected() bool {
+	smdb.mu.RLock()
+	defer smdb.mu.RUnlock()
+	return smdb.isConnected()
 }
 
 // Client is a getter returning a mongo client.
