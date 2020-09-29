@@ -91,7 +91,10 @@ func (smdb *singleMongoDB) disconnect() {
 	if smdb.isConnected() {
 		for smdb.client.Disconnect(context.Background()) != nil {
 		}
+		// disposal
 		smdb.client = nil
+		smdb.database = nil
+		smdb.collections = nil
 	}
 }
 
@@ -104,6 +107,7 @@ func (smdb *singleMongoDB) New() SingleMongoDB {
 // Errors if it cannot reach any of desired database or collections.
 // Call Disconnect method to close down connection.
 func (smdb *singleMongoDB) Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error {
+	// write lock
 	smdb.mu.Lock()
 	defer smdb.mu.Unlock()
 	// validate
@@ -151,8 +155,9 @@ func (smdb *singleMongoDB) Connect(ctx context.Context, uri, nameDB string, name
 
 // Disconnect the connection to DB.
 func (smdb *singleMongoDB) Disconnect(ctx context.Context) error {
-	smdb.mu.RLock()
-	defer smdb.mu.RUnlock()
+	// write lock
+	smdb.mu.Lock()
+	defer smdb.mu.Unlock()
 	if !smdb.isConnected() {
 		return errors.New("not connected")
 	}
@@ -161,6 +166,7 @@ func (smdb *singleMongoDB) Disconnect(ctx context.Context) error {
 
 // IsConnected tells if this is connected.
 func (smdb *singleMongoDB) IsConnected() bool {
+	// read lock
 	smdb.mu.RLock()
 	defer smdb.mu.RUnlock()
 	return smdb.isConnected()
@@ -169,6 +175,7 @@ func (smdb *singleMongoDB) IsConnected() bool {
 // Client is a getter returning a mongo client.
 // This returns nil if not connected.
 func (smdb *singleMongoDB) Client() *mongo.Client {
+	// read lock
 	smdb.mu.RLock()
 	defer smdb.mu.RUnlock()
 	if !smdb.isConnected() {
@@ -180,6 +187,7 @@ func (smdb *singleMongoDB) Client() *mongo.Client {
 // Database is a getter returning an object representation of a DB.
 // This returns nil if not connected.
 func (smdb *singleMongoDB) Database() *mongo.Database {
+	// read lock
 	smdb.mu.RLock()
 	defer smdb.mu.RUnlock()
 	if !smdb.isConnected() {
@@ -191,8 +199,9 @@ func (smdb *singleMongoDB) Database() *mongo.Database {
 // Collection gets a collection from DB efficiently as it uses a map to cache collection objects.
 // This returns nil if not connected or collection is not present in the database.
 func (smdb *singleMongoDB) Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection {
-	smdb.mu.RLock()
-	defer smdb.mu.RUnlock()
+	// write lock
+	smdb.mu.Lock()
+	defer smdb.mu.Unlock()
 	if !smdb.isConnected() {
 		return nil
 	}
