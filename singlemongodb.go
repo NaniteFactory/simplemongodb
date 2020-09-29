@@ -14,6 +14,16 @@ import (
 // Singleton since we don't need multiple connections for a single app.
 var defaultSingleMongoDB = &singleMongoDB{}
 
+// Self returns this package as an object.
+func Self() SingleMongoDB {
+	return defaultSingleMongoDB
+}
+
+// New is a constructor you wouldn't want to use at all.
+func New() SingleMongoDB {
+	return &singleMongoDB{}
+}
+
 // Connect to a single DB with a single mongo client.
 func Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error {
 	return defaultSingleMongoDB.Connect(ctx, uri, nameDB, nameCollections...)
@@ -44,16 +54,12 @@ func Collection(name string, opts ...*options.CollectionOptions) *mongo.Collecti
 
 // SingleMongoDB wraps around a single DB with a single mongodb client.
 type SingleMongoDB interface {
+	New() SingleMongoDB
 	Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error
 	Disconnect(ctx context.Context) error
 	Client() *mongo.Client
 	Database() *mongo.Database
 	Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection
-}
-
-// New is a constructor you wouldn't want to use at all.
-func New() SingleMongoDB {
-	return &singleMongoDB{}
 }
 
 // singleMongoDB wraps around a single DB with a single mongodb client.
@@ -77,6 +83,11 @@ func (smdb *singleMongoDB) disconnect() {
 		}
 		smdb.client = nil
 	}
+}
+
+// New is a constructor you wouldn't want to use at all.
+func (smdb *singleMongoDB) New() SingleMongoDB {
+	return &singleMongoDB{}
 }
 
 // Connect to a single DB with a single mongo client.
