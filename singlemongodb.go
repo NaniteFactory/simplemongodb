@@ -75,10 +75,11 @@ type SingleMongoDB interface {
 // singleMongoDB wraps around a single DB with a single mongodb client.
 // Zero value of this is ready to use.
 type singleMongoDB struct {
-	mu          sync.RWMutex
-	client      *mongo.Client
-	database    *mongo.Database
-	collections map[string]*mongo.Collection
+	mu            sync.RWMutex
+	client        *mongo.Client
+	database      *mongo.Database
+	collections   map[string]*mongo.Collection
+	collectionsMu sync.RWMutex
 }
 
 func (smdb *singleMongoDB) isConnected() bool {
@@ -140,14 +141,18 @@ func (smdb *singleMongoDB) Connect(ctx context.Context, uri, nameDB string, name
 		return fmt.Errorf("cannot get database: %v", nameDB)
 	}
 	// set collection
+	smdb.collectionsMu.Lock()
 	smdb.collections = map[string]*mongo.Collection{}
+	smdb.collectionsMu.Unlock()
 	for _, nameCollection := range nameCollections {
 		collection := smdb.database.Collection(nameCollection)
 		if collection == nil {
 			smdb.disconnect()
 			return fmt.Errorf("cannot get collection: %v", nameCollection)
 		}
+		smdb.collectionsMu.Lock()
 		smdb.collections[nameCollection] = smdb.database.Collection(nameCollection)
+		smdb.collectionsMu.Unlock()
 	}
 	// return
 	return nil
@@ -199,14 +204,22 @@ func (smdb *singleMongoDB) Database() *mongo.Database {
 // Collection gets a collection from DB efficiently as it uses a map to cache collection objects.
 // This returns nil if not connected or collection is not present in the database.
 func (smdb *singleMongoDB) Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection {
-	// write lock
-	smdb.mu.Lock()
-	defer smdb.mu.Unlock()
+	// read lock
+	smdb.mu.RLock()
+	defer smdb.mu.RUnlock()
 	if !smdb.isConnected() {
 		return nil
 	}
-	if _, ok := smdb.collections[name]; !ok {
-		smdb.collections[name] = smdb.database.Collection(name, opts...)
+	// read lock
+	smdb.collectionsMu.RLock()
+	ret, ok := smdb.collections[name]
+	smdb.collectionsMu.RUnlock()
+	if !ok {
+		ret = smdb.database.Collection(name, opts...)
+		// write lock
+		smdb.collectionsMu.Lock()
+		smdb.collections[name] = ret
+		smdb.collectionsMu.Unlock()
 	}
-	return smdb.collections[name]
+	return ret
 }
