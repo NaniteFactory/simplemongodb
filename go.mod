@@ -1,4 +1,4 @@
-module github.com/nanitefactory/singlemongodb
+module github.com/nanitefactory/simplemongodb
 
 go 1.15
 
