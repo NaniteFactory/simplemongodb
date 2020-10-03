@@ -1,5 +1,5 @@
-// Package singlemongodb wraps around a single DB with a single mongodb client.
-package singlemongodb
+// Package simplemongodb provides a struct that wraps around a single DB with a single mongodb client.
+package simplemongodb
 
 import (
 	"context"
@@ -11,70 +11,24 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// Singleton since we don't need multiple connections for a single app.
-var defaultSingleMongoDB = &singleMongoDB{}
-
-// Self returns this package as an object.
-// It is not recommended to use this function.
-func Self() SingleMongoDB {
-	return defaultSingleMongoDB
+// New is a constructor.
+func New() SimpleMongoDB {
+	return &simpleMongoDB{}
 }
 
-// New is a constructor you wouldn't want to use at all.
-func New() SingleMongoDB {
-	return &singleMongoDB{}
-}
-
-// Connect to a single DB with a single mongo client.
-// Errors if it cannot reach any of desired database or collections.
-// Call Disconnect method to close down connection.
-func Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error {
-	return defaultSingleMongoDB.Connect(ctx, uri, nameDB, nameCollections...)
-}
-
-// Disconnect from client and delete its object.
-// If client is nil then this procedure is noop.
-func Disconnect(ctx context.Context) error {
-	return defaultSingleMongoDB.Disconnect(ctx)
-}
-
-// IsConnected tells if this is connected.
-func IsConnected() bool {
-	return defaultSingleMongoDB.IsConnected()
-}
-
-// Client is a getter returning a mongo client.
-// This returns nil if not connected.
-func Client() *mongo.Client {
-	return defaultSingleMongoDB.Client()
-}
-
-// Database is a getter returning an object representation of a DB.
-// This returns nil if not connected.
-func Database() *mongo.Database {
-	return defaultSingleMongoDB.Database()
-}
-
-// Collection gets a collection from DB efficiently as it uses a map to cache collection objects.
-// This returns nil if not connected or collection is not present in the database.
-func Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection {
-	return defaultSingleMongoDB.Collection(name, opts...)
-}
-
-// SingleMongoDB wraps around a single DB with a single mongodb client.
-type SingleMongoDB interface {
+// SimpleMongoDB wraps around a single DB with a single mongodb client.
+type SimpleMongoDB interface {
 	Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error
 	Disconnect(ctx context.Context) error
 	IsConnected() bool
 	Client() *mongo.Client
 	Database() *mongo.Database
 	Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection
-	New() SingleMongoDB
 }
 
-// singleMongoDB wraps around a single DB with a single mongodb client.
+// simpleMongoDB wraps around a single DB with a single mongodb client.
 // Zero value of this is ready to use.
-type singleMongoDB struct {
+type simpleMongoDB struct {
 	mu            sync.RWMutex
 	client        *mongo.Client
 	database      *mongo.Database
@@ -82,13 +36,13 @@ type singleMongoDB struct {
 	collectionsMu sync.RWMutex
 }
 
-func (smdb *singleMongoDB) isConnected() bool {
+func (smdb *simpleMongoDB) isConnected() bool {
 	return smdb.client != nil
 }
 
 // Disconnect from client and delete its object.
 // If client is nil then this procedure is noop.
-func (smdb *singleMongoDB) disconnect() {
+func (smdb *simpleMongoDB) disconnect() {
 	if smdb.isConnected() {
 		for smdb.client.Disconnect(context.Background()) != nil {
 		}
@@ -99,15 +53,10 @@ func (smdb *singleMongoDB) disconnect() {
 	}
 }
 
-// New is a constructor you wouldn't want to use at all.
-func (smdb *singleMongoDB) New() SingleMongoDB {
-	return &singleMongoDB{}
-}
-
 // Connect to a single DB with a single mongo client.
 // Errors if it cannot reach any of desired database or collections.
 // Call Disconnect method to close down connection.
-func (smdb *singleMongoDB) Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error {
+func (smdb *simpleMongoDB) Connect(ctx context.Context, uri, nameDB string, nameCollections ...string) error {
 	// write lock
 	smdb.mu.Lock()
 	defer smdb.mu.Unlock()
@@ -159,7 +108,7 @@ func (smdb *singleMongoDB) Connect(ctx context.Context, uri, nameDB string, name
 }
 
 // Disconnect the connection to DB.
-func (smdb *singleMongoDB) Disconnect(ctx context.Context) error {
+func (smdb *simpleMongoDB) Disconnect(ctx context.Context) error {
 	// write lock
 	smdb.mu.Lock()
 	defer smdb.mu.Unlock()
@@ -170,7 +119,7 @@ func (smdb *singleMongoDB) Disconnect(ctx context.Context) error {
 }
 
 // IsConnected tells if this is connected.
-func (smdb *singleMongoDB) IsConnected() bool {
+func (smdb *simpleMongoDB) IsConnected() bool {
 	// read lock
 	smdb.mu.RLock()
 	defer smdb.mu.RUnlock()
@@ -179,7 +128,7 @@ func (smdb *singleMongoDB) IsConnected() bool {
 
 // Client is a getter returning a mongo client.
 // This returns nil if not connected.
-func (smdb *singleMongoDB) Client() *mongo.Client {
+func (smdb *simpleMongoDB) Client() *mongo.Client {
 	// read lock
 	smdb.mu.RLock()
 	defer smdb.mu.RUnlock()
@@ -191,7 +140,7 @@ func (smdb *singleMongoDB) Client() *mongo.Client {
 
 // Database is a getter returning an object representation of a DB.
 // This returns nil if not connected.
-func (smdb *singleMongoDB) Database() *mongo.Database {
+func (smdb *simpleMongoDB) Database() *mongo.Database {
 	// read lock
 	smdb.mu.RLock()
 	defer smdb.mu.RUnlock()
@@ -203,7 +152,7 @@ func (smdb *singleMongoDB) Database() *mongo.Database {
 
 // Collection gets a collection from DB efficiently as it uses a map to cache collection objects.
 // This returns nil if not connected or collection is not present in the database.
-func (smdb *singleMongoDB) Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection {
+func (smdb *simpleMongoDB) Collection(name string, opts ...*options.CollectionOptions) *mongo.Collection {
 	// read lock
 	smdb.mu.RLock()
 	defer smdb.mu.RUnlock()
