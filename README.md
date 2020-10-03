@@ -1,9 +1,9 @@
-# singlemongodb
+# simplemongodb
 
-[![GoDoc](https://godoc.org/github.com/nanitefactory/singlemongodb?status.svg)](https://godoc.org/github.com/nanitefactory/singlemongodb)
+[![GoDoc](https://godoc.org/github.com/nanitefactory/simplemongodb?status.svg)](https://godoc.org/github.com/nanitefactory/simplemongodb)
 
-Package singlemongodb wraps around a single DB with a single mongodb client.
+Package simplemongodb provides a struct that wraps around a single DB with a single mongodb client.
 
 ```bash
-go get -v github.com/nanitefactory/singlemongodb
+go get -v github.com/nanitefactory/simplemongodb
 ```
